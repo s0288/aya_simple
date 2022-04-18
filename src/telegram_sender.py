@@ -4,7 +4,7 @@ Handle outgoing messages.
 import urllib
 import requests
 import json
-from src.utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime
+from src.utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start
 
 USER_DICT = load_users()
 
@@ -16,8 +16,10 @@ def find_response(telegram_id, message_text):
     :return: None
     """
     first_word = message_text.split(' ')[0].lower()
+    event_name=None
     if first_word == "/start":
         outgoing_txt = _get_rules()
+        event_name="start"
     elif first_word == '/name':
         name = message_text.split(' ')[1]
         if name in USER_DICT.values():
@@ -26,8 +28,25 @@ def find_response(telegram_id, message_text):
             outgoing_txt = f"Willkommen, {name}"
             USER_DICT[telegram_id] = name
             write_user_to_db(telegram_id, name)
-    _send_message_to_telegram(telegram_id, outgoing_txt)
-
+            event_name="set_name"
+    elif first_word == "/fasten":
+        time_since_fasting_start = get_time_since_fasting_start(telegram_id)
+        if time_since_fasting_start:
+            outgoing_txt = "Du fastest seit " + time_since_fasting_start + "."
+            event_name="fast_info"
+        else:
+            outgoing_txt = "Ich habe das Fasten gestartet. Viel Erfolg 🙂."
+            event_name="fast_start"
+    elif first_word == "/ende":
+        time_since_fasting_start = get_time_since_fasting_start(telegram_id)
+        if time_since_fasting_start:
+            outgoing_txt = "Ich habe dein Fasten beendet. Du hast " + time_since_fasting_start + " gefastet. Glückwünsch 🙂."
+            event_name="fast_end"
+        else:
+            outgoing_txt = "Aktuell fastest du nicht. Beginne das Fasten mit /fasten."
+    else:
+        return None
+    _send_message_to_telegram(telegram_id, outgoing_txt, event_name=event_name)
 
 def _get_rules():
     """
@@ -45,7 +64,7 @@ def _get_rules():
     return txt
 
 
-def _send_message_to_telegram(chat_id, message_text, inline_keyboard=None):
+def _send_message_to_telegram(chat_id, message_text, inline_keyboard=None, event_name=None):
     """
     Send message_text to Telegram endpoint. More details here: https://core.telegram.org/bots/api#sendmessage
     :param chat_id: chat id of user
@@ -63,7 +82,7 @@ def _send_message_to_telegram(chat_id, message_text, inline_keyboard=None):
     response=requests.get(url) # post msg to Telegram server
     # create separate function for this
     chat_id, telegram_id, message_text, timestamp_received = _extract_response(json.loads(response.content.decode("utf8")))
-    write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received)
+    write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received, event_name=event_name)
 
 
 def _extract_response(response):
@@ -79,3 +98,4 @@ def _extract_response(response):
     message_text = response["result"]["text"]
     timestamp_received = convert_secs_to_datetime(response["result"]["date"])
     return chat_id, telegram_id, message_text, timestamp_received
+

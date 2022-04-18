@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 import os
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 from dotenv import load_dotenv, find_dotenv
@@ -87,3 +87,39 @@ def write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received, upda
 
 def convert_secs_to_datetime(secs):
     return datetime.fromtimestamp(secs).astimezone(tz=pytz.timezone('Europe/Berlin')).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_time_since_fasting_start(telegram_id):
+    """
+    Get time since the user started to fast. If the user doesn't fast, return None.
+    :param telegram_id: Telegram ID of user
+    :return: time since start of fast
+    :rtype: str
+    """
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                select
+                    max_start
+                from (
+                select 
+                    max(timestamp_received) filter(where event_name='fast_start') as max_start, 
+                    max(timestamp_received) filter(where event_name='fast_end') as max_end 
+                from {os.environ.get('DB_PROD_LEVEL')}.aya_messages
+                where chat_id = {telegram_id}
+                ) sub
+                where max_start > coalesce(max_end, '2001-01-01 00:00:00'); 
+                """
+            )
+            try:
+                time_at_fasting_start = cur.fetchall()[0][0]
+                result = _get_time_since_fasting_start(time_at_fasting_start)
+            except:
+                result = None
+    return result
+
+def _get_time_since_fasting_start(time_at_fasting_start):
+    seconds = (datetime.now() - time_at_fasting_start).total_seconds()
+    mins, _ = divmod(seconds, 60)
+    hours, mins = divmod(mins, 60)
+    return f"{hours:,.0f} Stunden und {mins:,.0f} Minuten"
