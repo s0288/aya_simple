@@ -8,6 +8,7 @@ import logging
 import time
 import sys
 from telegram_listener import get_incoming_message_and_next_update_id, extract_main
+from telegram_sender import find_response
 
 def open_connection_to_telegram_chatbot(chat_id=None):
     # last_update_id is used to make sure that messages are only retrieved once
@@ -18,6 +19,7 @@ def open_connection_to_telegram_chatbot(chat_id=None):
             incoming_message, next_update_id = get_incoming_message_and_next_update_id(offset=next_update_id)
             if incoming_message:
                 chat_id, message_text = extract_main(incoming_message)
+                find_response(chat_id, message_text)
         except Exception as e:
             logging.exception(e)
         time.sleep(0.5)

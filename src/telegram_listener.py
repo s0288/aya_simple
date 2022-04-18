@@ -7,12 +7,10 @@ from os.path import join, dirname
 import requests
 import json
 import logging
+from datetime import datetime
 
-from dotenv import load_dotenv
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+from utils import URL, write_msg_to_db, convert_secs_to_datetime
 
-URL = f"https://api.telegram.org/bot{os.environ.get('TELEGRAM_TOKEN')}/"
 
 def get_incoming_message_and_next_update_id(offset=None):
     """
@@ -78,19 +76,21 @@ def _get_incoming_message_and_next_update_id(js):
 
 def extract_main(incoming_message):
     """
-    Extract chat_id and text from incoming message.
+    Extract chat_id and text from incoming message. 
+    Save message with update_id and return chat_id and message_text.
     :param incoming_message: incoming message as json, in Telegram message format.
     :return: chat_id, text of incoming message
     :rtype: int, str
     """
     extraction_method = _set_extraction_method(incoming_message)
     if extraction_method == 'do_not_extract':
-        return None, None
+        return None, None, None
     if extraction_method == 'extract_message':
-        chat_id, message_text = _extract_message(incoming_message['message'])
+        chat_id, update_id, message_text, timestamp_received = _extract_message(incoming_message)
     elif extraction_method == 'extract_callback':
         _answer_callback(incoming_message['callback_query']['id'])
-        chat_id, message_text = _extract_callback(incoming_message['callback_query'])
+        chat_id, update_id, message_text, timestamp_received = _extract_callback(incoming_message)
+    write_msg_to_db(chat_id, chat_id, message_text, timestamp_received, update_id=update_id)
     return chat_id, message_text
 
 
@@ -112,24 +112,26 @@ def _set_extraction_method(incoming_message):
         return 'do_not_extract'
 
 
-def _extract_message(message_object):
+def _extract_message(incoming_message):
     """
     If message is an img or document, only return Telegram's file id.
-    :param message_object: message object in incoming message json
-    :return: chat_id, text of incoming message
-    :rtype: int, str
+    :param incoming_message: incoming message as dict
+    :return: chat_id, update_id, text of incoming message
+    :rtype: int, int, str
     """
-    chat_id = message_object["chat"]["id"]
-    if message_object.get('text'):
-        message_text = message_object["text"]
-    elif message_object.get('document'): # e.g. pdf
-        message_text = 'file: ' + message_object["document"]["file_id"]
-    elif message_object.get('photo'): # e.g. jpg
+    chat_id = incoming_message["message"]["chat"]["id"]
+    update_id = incoming_message["update_id"]
+    timestamp_received = convert_secs_to_datetime(incoming_message["message"]["date"])
+    if incoming_message["message"].get('text'):
+        message_text = incoming_message["message"]["text"]
+    elif incoming_message["message"].get('document'): # e.g. pdf
+        message_text = 'file: ' + incoming_message["message"]["document"]["file_id"]
+    elif incoming_message["message"].get('photo'): # e.g. jpg
         try:
-            message_text = 'file: ' + message_object["photo"][3]["file_id"]
+            message_text = 'file: ' + incoming_message["message"]["photo"][3]["file_id"]
         except:
-            message_text = 'file: ' + message_object["photo"][0]["file_id"]
-    return chat_id, message_text
+            message_text = 'file: ' + incoming_message["message"]["photo"][0]["file_id"]
+    return chat_id, update_id, message_text, timestamp_received
 
 
 def _answer_callback(callback_query_id):
@@ -142,12 +144,14 @@ def _answer_callback(callback_query_id):
     _call_telegram_url(url)
 
 
-def _extract_callback(callback_query_object):
+def _extract_callback(incoming_message):
     """
     :param incoming_message: incoming message as json, in Telegram message format.
-    :return: chat_id, text of incoming message
-    :rtype: int, str
+    :return: chat_id, update_id, text of incoming message
+    :rtype: int, int, str
     """
-    chat_id = callback_query_object["message"]["chat"]["id"]
-    message_text = callback_query_object["data"]
-    return chat_id, message_text
+    chat_id = incoming_message["callback_query"]["message"]["chat"]["id"]
+    update_id = incoming_message["update_id"]
+    message_text = incoming_message["callback_query"]["data"]
+    timestamp_received = convert_secs_to_datetime(incoming_message["callback_query"]["message"]["date"])
+    return chat_id, update_id, message_text, timestamp_received

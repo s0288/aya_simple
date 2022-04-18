@@ -1,0 +1,5 @@
+# for base functions
+requests==2.27.1
+psycopg2-binary==2.9.3
+pytz==2022.1
+python-dotenv==0.20.0
