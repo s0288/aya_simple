@@ -1,1 +1,1 @@
-Minimal implementation of a Telegram chatbot
+Minimal implementation of a fasting chatbot.

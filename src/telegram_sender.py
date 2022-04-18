@@ -4,7 +4,7 @@ Handle outgoing messages.
 import urllib
 import requests
 import json
-from src.utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start
+from utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start
 
 USER_DICT = load_users()
 

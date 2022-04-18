@@ -64,7 +64,7 @@ def write_user_to_db(telegram_id, name):
                 INSERT INTO {os.environ.get('DB_PROD_LEVEL')}.users 
                     (telegram_id, name, status_timestamp) 
                 VALUES  
-                    ({telegram_id}, '{name}', '{datetime.now(tz=pytz.timezone('Europe/Berlin'))}')
+                    ({telegram_id}, '{name}', '{datetime.now()}')
                 """)
 
 def write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received, update_id=None, event_name=None):
@@ -82,11 +82,11 @@ def write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received, upda
                     (
                         %s, %s, %s, %s, %s, %s, %s
                     )""",
-                (chat_id, telegram_id, update_id, message_text, event_name, timestamp_received, datetime.now(tz=pytz.timezone('Europe/Berlin')))
+                (chat_id, telegram_id, update_id, message_text, event_name, timestamp_received, datetime.now())
             )
 
 def convert_secs_to_datetime(secs):
-    return datetime.fromtimestamp(secs).astimezone(tz=pytz.timezone('Europe/Berlin')).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(secs).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_time_since_fasting_start(telegram_id):

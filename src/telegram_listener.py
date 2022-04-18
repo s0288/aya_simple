@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime
 
-from src.utils import URL, write_msg_to_db, convert_secs_to_datetime
+from utils import URL, write_msg_to_db, convert_secs_to_datetime
 
 
 def get_incoming_message_and_next_update_id(offset=None):
