@@ -44,6 +44,9 @@ def find_response(telegram_id, message_text):
             event_name="fast_end"
         else:
             outgoing_txt = "Aktuell fastest du nicht. Beginne das Fasten mit /fasten."
+    elif first_word == "/rezepte":
+        outgoing_txt = "Hier sind ein paar Rezept-Ideen: https://s0288.github.io/strowan_recipes/alle-rezepte/"
+        event_name="recipes"
     else:
         return None
     _send_message_to_telegram(telegram_id, outgoing_txt, event_name=event_name)
