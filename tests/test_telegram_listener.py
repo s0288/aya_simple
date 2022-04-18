@@ -2,7 +2,7 @@
 Test functions for listener of incoming messages to Telegram.
 """
 import pytest
-import telegram_listener as tl
+import src.telegram_listener as tl
 
 @pytest.fixture
 def no_incoming_messages():
@@ -39,7 +39,8 @@ def input_single_message():
         "message":{
             "message_id":811,
             "from":{"id":123456789,"is_bot":False,"first_name":"FIRST_NAME","language_code":"en"},
-            "chat":{"id":123456789,"first_name":"FIRST_NAME","type":"private"},"date":1610819511,"text":"hi there"}
+            "chat":{"id":123456789,"first_name":"FIRST_NAME","type":"private"},"date":1610819511,"text":"hi there"
+            }
         }
     return single_message
 
@@ -54,8 +55,10 @@ def input_single_callback():
                 {"id":987654321,"is_bot":True,"first_name":"TEST_BOT_NAME","username":"TEST_BOT"},
                 "chat":{"id":123456789,"first_name":"FIRST_NAME","type":"private"},
                 "date":1639921259,"text":"Alternative A oder B?",
-                "reply_markup":{"inline_keyboard":[[{"text":"A","callback_data":"A"},{"text":"B","callback_data":"B"}]]}}
-            ,"chat_instance":"630986056078679937","data":"B"}
+                "reply_markup":{"inline_keyboard":[[{"text":"A","callback_data":"A"},{"text":"B","callback_data":"B"}]]}
+                }
+            ,"chat_instance":"630986056078679937","data":"B"
+            }
         }
     return single_callback
 
@@ -80,9 +83,9 @@ def input_single_my_chat_member():
             "from":{"id":123456789,"is_bot":False,"first_name":"FIRST_NAME","language_code":"en"},
             "date":1650264798,
             "old_chat_member":{
-                "user":{"id":987654321,"is_bot":True,"first_name":"TELEGRAM_TEST_NAME","username":"TELEGRAM_TEST_BOT"},"status":"left"},
+                "user":{"id":987654321,"is_bot":True,"first_name":"TEST_NAME","username":"TEST_BOT"},"status":"left"},
             "new_chat_member":{
-                "user":{"id":987654321,"is_bot":True,"first_name":"TELEGRAM_TEST_NAME","username":"TELEGRAM_TEST_BOT"},"status":"member"}
+                "user":{"id":987654321,"is_bot":True,"first_name":"TEST_NAME","username":"TEST_BOT"},"status":"member"}
             }
         }
     return my_chat_member
@@ -143,13 +146,13 @@ def test_telegram_listener__set_extraction_method_with_my_chat_member_message(in
     assert tl._set_extraction_method(input_single_my_chat_member) == "do_not_extract"
 
 def test_telegram_listener__extract_message_with_message(input_single_message):
-    assert tl._extract_message(input_single_message["message"]) == (123456789, "hi there")
+    assert tl._extract_message(input_single_message) == (123456789, 161176028, "hi there", '2021-01-16 18:51:51')
 
 def test_telegram_listener__extract_message_with_jpeg(input_single_jpeg):
-    assert tl._extract_message(input_single_jpeg["message"]) == (123456789, 'file: abcDEfhig')
+    assert tl._extract_message(input_single_jpeg) == (123456789, 161176352, 'file: abcDEfhig', '2022-04-18 09:44:06')
 
 def test_telegram_listener__extract_message_with_pdf(input_single_pdf):
-    assert tl._extract_message(input_single_pdf["message"]) == (123456789, 'file: FILE_ID')
+    assert tl._extract_message(input_single_pdf) == (123456789, 161176353, 'file: FILE_ID', '2022-04-18 09:50:39')
 
 def test_telegram_listener__extract_callback(input_single_callback):
-    assert tl._extract_callback(input_single_callback["callback_query"]) == (123456789, 'B')
+    assert tl._extract_callback(input_single_callback) == (123456789, 161176348, 'B', '2021-12-19 14:40:59')
