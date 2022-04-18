@@ -48,7 +48,8 @@ def find_response(telegram_id, message_text):
         outgoing_txt = "Hier sind ein paar Rezept-Ideen: https://s0288.github.io/strowan_recipes/alle-rezepte/"
         event_name="recipes"
     else:
-        return None
+        outgoing_txt = _get_rules()
+        event_name="default_fallback"
     _send_message_to_telegram(telegram_id, outgoing_txt, event_name=event_name)
 
 def _get_rules():
@@ -60,10 +61,8 @@ def _get_rules():
     txt += "Beachte hierfür:\n\n"
     txt += "- 1.) Gib /name und einen Namen deiner Wahl ein:\n"
     txt += "Bsp.: /name alex\n\n"
-    txt += "- 2.) Sag mir, wenn du fasten möchtest:\n"
-    txt += "Bsp.: Ich möchte fasten.\n\n"
-    txt += "- 3.) Sag mir, wenn du das Fasten beendest:\n"
-    txt += "Bsp.: Ende."
+    txt += "- 2.) Schicke mir einen Befehl:\n"
+    txt += "Diese Befehle gibt es: /fasten, /ende, /rezepte, /name."
     return txt
 
 
