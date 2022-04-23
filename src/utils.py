@@ -113,13 +113,33 @@ def get_time_since_fasting_start(telegram_id):
             )
             try:
                 time_at_fasting_start = cur.fetchall()[0][0]
-                result = _get_time_since_fasting_start(time_at_fasting_start)
+                hours_as_float, hours_as_text = _get_time_since_fasting_start(time_at_fasting_start)
             except:
-                result = None
-    return result
+                hours_as_float, hours_as_text = None, None
+    return hours_as_float, hours_as_text
+
 
 def _get_time_since_fasting_start(time_at_fasting_start):
     seconds = (datetime.now() - time_at_fasting_start).total_seconds()
+    hours_as_float = round(seconds/60/60, 4)
     mins, _ = divmod(seconds, 60)
     hours, mins = divmod(mins, 60)
-    return f"{hours:,.0f} Stunden und {mins:,.0f} Minuten"
+    hours_as_text = f"{hours:,.0f} Stunden und {mins:,.0f} Minuten"
+    return hours_as_float, hours_as_text
+
+
+def write_event_to_db(telegram_id, event_name, event_value):
+    """
+    Write new event to SCHEMA.aya_events.
+    :param telegram_id: Telegram ID of user
+    :param event_name: name of event
+    :param event_value: value of event
+    """
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                INSERT INTO {os.environ.get('DB_PROD_LEVEL')}.aya_events 
+                    (chat_id, telegram_id, event_name, event_value, timestamp_saved) 
+                VALUES  
+                    ({telegram_id}, {telegram_id}, '{event_name}', '{event_value}', '{datetime.now()}')
+                """)

@@ -4,7 +4,7 @@ Handle outgoing messages.
 import urllib
 import requests
 import json
-from utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start
+from utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start, write_event_to_db
 
 USER_DICT = load_users()
 
@@ -30,18 +30,19 @@ def find_response(telegram_id, message_text):
             write_user_to_db(telegram_id, name)
             event_name="set_name"
     elif first_word == "/fasten":
-        time_since_fasting_start = get_time_since_fasting_start(telegram_id)
-        if time_since_fasting_start:
-            outgoing_txt = "Du fastest seit " + time_since_fasting_start + "."
+        _, hours_since_fasting_start_as_text = get_time_since_fasting_start(telegram_id)
+        if hours_since_fasting_start_as_text:
+            outgoing_txt = "Du fastest seit " + hours_since_fasting_start_as_text + "."
             event_name="fast_info"
         else:
             outgoing_txt = "Ich habe das Fasten gestartet. Viel Erfolg 🙂."
             event_name="fast_start"
     elif first_word == "/ende":
-        time_since_fasting_start = get_time_since_fasting_start(telegram_id)
-        if time_since_fasting_start:
-            outgoing_txt = "Ich habe dein Fasten beendet. Du hast " + time_since_fasting_start + " gefastet. Glückwünsch 🙂."
+        hours_since_fasting_start_as_float, hours_since_fasting_start_as_text = get_time_since_fasting_start(telegram_id)
+        if hours_since_fasting_start_as_text:
+            outgoing_txt = "Ich habe dein Fasten beendet. Du hast " + hours_since_fasting_start_as_text + " gefastet. Glückwünsch 🙂."
             event_name="fast_end"
+            write_event_to_db(telegram_id, event_name, hours_since_fasting_start_as_float)
         else:
             outgoing_txt = "Aktuell fastest du nicht. Beginne das Fasten mit /fasten."
     elif first_word == "/rezepte":
