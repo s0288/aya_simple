@@ -4,9 +4,18 @@ Handle outgoing messages.
 import urllib
 import requests
 import json
-from utils import load_users, URL, write_user_to_db, write_msg_to_db, convert_secs_to_datetime, get_time_since_fasting_start, write_event_to_db
+from utils import (
+    load_users,
+    URL,
+    write_user_to_db,
+    write_msg_to_db,
+    convert_secs_to_datetime,
+    get_time_since_fasting_start,
+    write_event_to_db,
+)
 
 USER_DICT = load_users()
+
 
 def find_response(telegram_id, message_text):
     """
@@ -15,43 +24,60 @@ def find_response(telegram_id, message_text):
     :param message_text: text of incoming message_text
     :return: None
     """
-    first_word = message_text.split(' ')[0].lower()
-    event_name=None
+    first_word = message_text.split(" ")[0].lower()
+    event_name = None
     if first_word == "/start":
         outgoing_txt = _get_rules()
-        event_name="start"
-    elif first_word == '/name':
-        name = message_text.split(' ')[1]
+        event_name = "start"
+    elif first_word == "/name":
+        name = message_text.split(" ")[1]
         if name in USER_DICT.values():
-            outgoing_txt = "Name bereits vergeben. Bitte wähle einen anderen mit /name [dein Name]"
+            outgoing_txt = (
+                "Name bereits vergeben. Bitte wähle einen anderen mit /name [dein Name]"
+            )
         else:
             outgoing_txt = f"Willkommen, {name}"
             USER_DICT[telegram_id] = name
             write_user_to_db(telegram_id, name)
-            event_name="set_name"
+            event_name = "set_name"
     elif first_word == "/fasten":
         _, hours_since_fasting_start_as_text = get_time_since_fasting_start(telegram_id)
         if hours_since_fasting_start_as_text:
             outgoing_txt = "Du fastest seit " + hours_since_fasting_start_as_text + "."
-            event_name="fast_info"
+            event_name = "fast_info"
         else:
             outgoing_txt = "Ich habe das Fasten gestartet. Viel Erfolg 🙂."
-            event_name="fast_start"
+            event_name = "fast_start"
     elif first_word == "/ende":
-        hours_since_fasting_start_as_float, hours_since_fasting_start_as_text = get_time_since_fasting_start(telegram_id)
+        (
+            hours_since_fasting_start_as_float,
+            hours_since_fasting_start_as_text,
+        ) = get_time_since_fasting_start(telegram_id)
         if hours_since_fasting_start_as_text:
-            outgoing_txt = "Ich habe dein Fasten beendet. Du hast " + hours_since_fasting_start_as_text + " gefastet. Glückwünsch 🙂."
-            event_name="fast_end"
-            write_event_to_db(telegram_id, event_name, hours_since_fasting_start_as_float)
+            outgoing_txt = (
+                "Ich habe dein Fasten beendet. Du hast "
+                + hours_since_fasting_start_as_text
+                + " gefastet. Glückwünsch 🙂."
+            )
+            event_name = "fast_end"
+            write_event_to_db(
+                telegram_id, event_name, hours_since_fasting_start_as_float
+            )
         else:
             outgoing_txt = "Aktuell fastest du nicht. Beginne das Fasten mit /fasten."
     elif first_word == "/rezepte":
         outgoing_txt = "Hier sind ein paar Rezept-Ideen: https://s0288.github.io/strowan_recipes/alle-rezepte/"
-        event_name="recipes"
+        event_name = "recipes"
+        write_event_to_db(telegram_id, event_name)
+    elif first_word == "/cheat_meal":
+        outgoing_txt = "Alles klar. Dein Cheat-Meal ist erfasst."
+        event_name = "cheat_meal"
+        write_event_to_db(telegram_id, event_name)
     else:
         outgoing_txt = _get_rules()
-        event_name="default_fallback"
+        event_name = "default_fallback"
     _send_message_to_telegram(telegram_id, outgoing_txt, event_name=event_name)
+
 
 def _get_rules():
     """
@@ -67,7 +93,9 @@ def _get_rules():
     return txt
 
 
-def _send_message_to_telegram(chat_id, message_text, inline_keyboard=None, event_name=None):
+def _send_message_to_telegram(
+    chat_id, message_text, inline_keyboard=None, event_name=None
+):
     """
     Send message_text to Telegram endpoint. More details here: https://core.telegram.org/bots/api#sendmessage
     :param chat_id: chat id of user
@@ -81,11 +109,15 @@ def _send_message_to_telegram(chat_id, message_text, inline_keyboard=None, event
     if inline_keyboard:
         url += f"&reply_markup={inline_keyboard}"
     else:
-        url += "&reply_markup={\"remove_keyboard\":%20true}"
-    response=requests.get(url) # post msg to Telegram server
+        url += '&reply_markup={"remove_keyboard":%20true}'
+    response = requests.get(url)  # post msg to Telegram server
     # create separate function for this
-    chat_id, telegram_id, message_text, timestamp_received = _extract_response(json.loads(response.content.decode("utf8")))
-    write_msg_to_db(chat_id, telegram_id, message_text, timestamp_received, event_name=event_name)
+    chat_id, telegram_id, message_text, timestamp_received = _extract_response(
+        json.loads(response.content.decode("utf8"))
+    )
+    write_msg_to_db(
+        chat_id, telegram_id, message_text, timestamp_received, event_name=event_name
+    )
 
 
 def _extract_response(response):
@@ -101,4 +133,3 @@ def _extract_response(response):
     message_text = response["result"]["text"]
     timestamp_received = convert_secs_to_datetime(response["result"]["date"])
     return chat_id, telegram_id, message_text, timestamp_received
-
